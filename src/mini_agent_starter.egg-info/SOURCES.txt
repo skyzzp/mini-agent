@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+src/mini_agent/__init__.py
+src/mini_agent/agent.py
+src/mini_agent/contracts.py
+src/mini_agent/fake_model.py
+src/mini_agent_starter.egg-info/PKG-INFO
+src/mini_agent_starter.egg-info/SOURCES.txt
+src/mini_agent_starter.egg-info/dependency_links.txt
+src/mini_agent_starter.egg-info/requires.txt
+src/mini_agent_starter.egg-info/top_level.txt
+tests/test_agent_public.py
+tests/test_starter.py
