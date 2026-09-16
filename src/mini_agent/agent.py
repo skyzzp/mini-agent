@@ -26,8 +26,11 @@ class Agent:
 
     def run(self, query: str) -> RunResult:
         messages=[{"role":"user","content":query}]
+        tool_specs= []
+        for tool in self.tools:
+            tool_specs.append(tool.as_model_spec())
         for step in range(1, self.max_steps + 1):
-            reply=self.model.complete(messages,[])
+            reply=self.model.complete(messages,tool_specs)
             messages.append({"role":"assistant","content":reply.content})
             if  reply.tool_calls:
                 for call in reply.tool_calls:
@@ -55,5 +58,5 @@ class Agent:
             steps=self.max_steps,)
 
 
-        raise NotImplementedError("Implement the Agent Loop")
+
 

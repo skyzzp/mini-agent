@@ -62,7 +62,7 @@ def test_agent_feeds_a_tool_result_back_to_the_model() -> None:
     agent = Agent(model, tools=[echo], permission_policy=AllowAll(), max_steps=3)
 
     result = agent.run("Use echo.")
-
+    assert model.requests[0]["tools"] == [echo.as_model_spec()]
     assert result.status == "completed"
     assert result.steps == 2
     second_request_messages = model.requests[1]["messages"]
