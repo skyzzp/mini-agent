@@ -191,3 +191,44 @@ def test_agent_handles_unknown_tool() -> None:
         "name": "missing_tool",
         "content": "The tool does not exist.",
     }
+def test_agent_handles_tool_execution_error() -> None:
+    def failing_handler(text):
+        raise ValueError("test failure")
+    model = FakeModel(
+        [
+            ModelReply(
+                tool_calls=[
+                    ToolCall(
+                        id="call_001",
+                        name="echo",
+                        arguments={"text": "hello"},
+                    )
+                ]
+            ),
+            ModelReply(content="The tool returned hello."),
+        ]
+    )
+    echo = Tool(
+        name="echo",
+        description="Return the supplied text.",
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+        handler=failing_handler,
+    )
+    agent = Agent(model, tools=[echo], permission_policy=AllowAll(), max_steps=3)
+
+    result = agent.run("Use echo.")
+    assert model.requests[0]["tools"] == [echo.as_model_spec()]
+    assert result.status == "completed"
+    assert result.steps == 2
+    second_request_messages = model.requests[1]["messages"]
+    assert second_request_messages[-1] == {
+        "role": "tool",
+        "tool_call_id": "call_001",
+        "name": "echo",
+        "content": "Tool execution failed: test failure",
+    }
