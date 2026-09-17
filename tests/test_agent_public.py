@@ -162,3 +162,32 @@ def test_agent_stops_at_max_steps() -> None:
     assert result.status == "max_steps"
     assert result.steps == 2
     assert len(model.requests) == 2
+
+
+def test_agent_handles_unknown_tool() -> None:
+    model = FakeModel(
+        [
+            ModelReply(
+                tool_calls=[
+                    ToolCall(
+                        id="call_001",
+                        name="missing_tool",
+                        arguments={"text": "hello"},
+                    )
+                ]
+            ),
+            ModelReply(content="The tool does not exist."),
+        ]
+    )
+    agent = Agent(model, tools=[], permission_policy=AllowAll(), max_steps=3)
+
+    result = agent.run("Use missing_tool")
+    assert model.requests[0]["tools"] == []#检查额外提供工具
+    assert result.status == "completed"
+    assert result.steps == 2
+    assert model.requests[1]["messages"][-1] == {
+        "role": "tool",
+        "tool_call_id": "call_001",
+        "name": "missing_tool",
+        "content": "The tool does not exist.",
+    }

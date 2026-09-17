@@ -34,14 +34,25 @@ class Agent:
             messages.append({"role":"assistant","content":reply.content})
             if  reply.tool_calls:
                 for call in reply.tool_calls:
+                    found_tool = None
                     for tool in self.tools:
                         if tool.name == call.name:
-                            tool_result= tool.handler(**call.arguments)
-                            messages.append({
-                                "role": "tool",
-                                "tool_call_id": call.id,
-                                "name": call.name,
-                                "content": tool_result,
+                            found_tool = tool
+                            break
+                    if found_tool == None:
+                         messages.append({
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "name": call.name,
+                            "content":"The tool does not exist." ,
+                        })
+                    else:
+                         tool_result = tool.handler(**call.arguments)
+                         messages.append({
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "name": call.name,
+                            "content": tool_result,
                         })
 
             if not reply.tool_calls:
@@ -56,7 +67,6 @@ class Agent:
             output=reply.content,
             messages=messages,
             steps=self.max_steps,)
-
 
 
 
