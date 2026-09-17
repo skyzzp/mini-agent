@@ -9,8 +9,6 @@ from mini_agent import (
     Tool,
     ToolCall,
 )
-
-
 class AllowAll:
     def decide(
         self,
@@ -18,6 +16,13 @@ class AllowAll:
         arguments: Mapping[str, Any],
     ) -> PermissionDecision:
         return PermissionDecision(allowed=True)
+class DenyAll:
+    def decide(
+        self,
+        tool,
+        arguments):
+        return PermissionDecision(allowed=False)
+
 
 
 def test_agent_can_finish_without_using_a_tool() -> None:
@@ -232,3 +237,49 @@ def test_agent_handles_tool_execution_error() -> None:
         "name": "echo",
         "content": "Tool execution failed: test failure",
     }
+
+def test_agent_denies_tool_execution() -> None:
+        executed = []
+
+        def tracking_handler(text):
+            executed.append(text)
+            return text
+        model = FakeModel(
+            [
+                ModelReply(
+                    tool_calls=[
+                        ToolCall(
+                            id="call_001",
+                            name="echo",
+                            arguments={"text": "hello"},
+                        )
+                    ]
+                ),
+                ModelReply(content="The tool returned hello."),
+            ]
+        )
+        echo = Tool(
+            name="echo",
+            description="Return the supplied text.",
+            input_schema={
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+                "additionalProperties": False,
+            },
+            handler=tracking_handler,
+        )
+        agent = Agent(model, tools=[echo], permission_policy=DenyAll(), max_steps=3)
+
+        result = agent.run("Use echo.")
+        assert model.requests[0]["tools"] == [echo.as_model_spec()]
+        assert result.status == "completed"
+        assert result.steps == 2
+        assert executed == []
+        second_request_messages = model.requests[1]["messages"]
+        assert second_request_messages[-1] == {
+            "role": "tool",
+            "tool_call_id": "call_001",
+            "name": "echo",
+            "content": "Tool execution denied",
+        }

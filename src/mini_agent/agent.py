@@ -47,16 +47,29 @@ class Agent:
                             "content":"The tool does not exist." ,
                         })
                     else:
-                        try:
-                             tool_result = found_tool.handler(**call.arguments)
-                        except Exception as error:
-                            tool_result = f"Tool execution failed: {error}"
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": call.id,
-                            "name": call.name,
-                            "content": tool_result,
-                        })
+                        decision = self.permission_policy.decide(
+                            found_tool,
+                            call.arguments,
+                        )
+                        if decision.allowed:
+                            try:
+                                 tool_result = found_tool.handler(**call.arguments)
+                            except Exception as error:
+                                tool_result = f"Tool execution failed: {error}"
+                            messages.append({
+                                "role": "tool",
+                                "tool_call_id": call.id,
+                                "name": call.name,
+                                "content": tool_result,
+                            })
+                        else:
+                            tool_result = "Tool execution denied"
+                            messages.append({
+                                "role": "tool",
+                                "tool_call_id": call.id,
+                                "name": call.name,
+                                "content": tool_result,
+                            })
 
             if not reply.tool_calls:
                 return RunResult(
