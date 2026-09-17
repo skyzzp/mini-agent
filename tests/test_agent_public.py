@@ -283,3 +283,17 @@ def test_agent_denies_tool_execution() -> None:
             "name": "echo",
             "content": "Tool execution denied",
         }
+def test_agent_handles_model_error() -> None:
+    class FailingModel:
+        def complete(self, messages, tools):
+            raise RuntimeError("connection failed")
+
+    model = FailingModel()
+    agent = Agent(model, tools=[], permission_policy=AllowAll(), max_steps=3)
+    result = agent.run("Say hello.")
+    assert result.status == "model_error"
+    assert result.output == "Model request failed: connection failed"
+    assert result.steps == 1
+    assert result.messages == [
+        {"role": "user", "content": "Say hello."},
+    ]

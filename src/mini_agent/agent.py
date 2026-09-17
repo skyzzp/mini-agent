@@ -30,7 +30,15 @@ class Agent:
         for tool in self.tools:
             tool_specs.append(tool.as_model_spec())
         for step in range(1, self.max_steps + 1):
-            reply=self.model.complete(messages,tool_specs)
+            try:
+                reply = self.model.complete(messages,tool_specs)
+            except Exception as error:
+                return RunResult(
+                    status="model_error",
+                     output=f"Model request failed: {error}",
+                     messages=messages,
+                     steps=step,
+                    )
             messages.append({"role":"assistant","content":reply.content})
             if  reply.tool_calls:
                 for call in reply.tool_calls:
@@ -39,7 +47,7 @@ class Agent:
                         if tool.name == call.name:
                             found_tool = tool
                             break
-                    if found_tool == None:
+                    if found_tool is None:
                          messages.append({
                             "role": "tool",
                             "tool_call_id": call.id,
