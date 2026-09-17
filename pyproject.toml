@@ -7,7 +7,9 @@ name = "mini-agent-starter"
 version = "0.1.0"
 description = "Starter code for the SAST Mini Agent admission task"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "jsonschema>=4.26.0",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<9"]

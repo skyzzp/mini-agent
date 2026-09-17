@@ -238,7 +238,7 @@ def test_agent_handles_tool_execution_error() -> None:
         "content": "Tool execution failed: test failure",
     }
 
-def test_agent_denies_tool_execution() -> None:
+def test_agent_denies_tool_execution() -> None:#拒绝权限测试
         executed = []
 
         def tracking_handler(text):
@@ -297,3 +297,130 @@ def test_agent_handles_model_error() -> None:
     assert result.messages == [
         {"role": "user", "content": "Say hello."},
     ]
+def test_agent_rejects_invalid_arguments() -> None:
+    executed = []
+
+    def tracking_handler(text):
+        executed.append(text)
+        return text
+
+    model = FakeModel(
+        [
+            ModelReply(
+                tool_calls=[
+                    ToolCall(
+                        id="call_001",
+                        name="echo",
+                        arguments={"text": 123},
+                    )
+                ]
+            ),
+            ModelReply(content="The tool returned hello."),
+        ]
+    )
+    echo = Tool(
+        name="echo",
+        description="Return the supplied text.",
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+        handler=tracking_handler,
+    )
+    agent = Agent(model, tools=[echo], permission_policy=AllowAll(), max_steps=3)
+
+    result = agent.run("Use echo.")
+    tool_message = model.requests[1]["messages"][-1]
+
+    assert tool_message["role"] == "tool"
+    assert tool_message["tool_call_id"] == "call_001"
+    assert tool_message["name"] == "echo"
+    assert tool_message["content"].startswith("Invalid tool arguments:")
+
+def test_agent_rejects_missing_arguments() -> None:
+    executed = []
+
+    def tracking_handler(text):
+        executed.append(text)
+        return text
+
+    model = FakeModel(
+        [
+            ModelReply(
+                tool_calls=[
+                    ToolCall(
+                        id="call_001",
+                        name="echo",
+                        arguments={},
+                    )
+                ]
+            ),
+            ModelReply(content="The tool returned hello."),
+        ]
+    )
+    echo = Tool(
+        name="echo",
+        description="Return the supplied text.",
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+        handler=tracking_handler,
+    )
+    agent = Agent(model, tools=[echo], permission_policy=AllowAll(), max_steps=3)
+
+    result = agent.run("Use echo.")
+    tool_message = model.requests[1]["messages"][-1]
+
+    assert tool_message["role"] == "tool"
+    assert tool_message["tool_call_id"] == "call_001"
+    assert tool_message["name"] == "echo"
+    assert tool_message["content"].startswith("Invalid tool arguments:")
+
+
+def test_agent_rejects_extra_arguments() -> None:
+    executed = []
+
+    def tracking_handler(text):
+        executed.append(text)
+        return text
+
+    model = FakeModel(
+        [
+            ModelReply(
+                tool_calls=[
+                    ToolCall(
+                        id="call_001",
+                        name="echo",
+                        arguments={"text":"hello","other":"world"},
+                    )
+                ]
+            ),
+            ModelReply(content="The tool returned hello."),
+        ]
+    )
+    echo = Tool(
+        name="echo",
+        description="Return the supplied text.",
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+        handler=tracking_handler,
+    )
+    agent = Agent(model, tools=[echo], permission_policy=AllowAll(), max_steps=3)
+
+    result = agent.run("Use echo.")
+    tool_message = model.requests[1]["messages"][-1]
+
+    assert tool_message["role"] == "tool"
+    assert tool_message["tool_call_id"] == "call_001"
+    assert tool_message["name"] == "echo"
+    assert tool_message["content"].startswith("Invalid tool arguments:")
+

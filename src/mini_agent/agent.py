@@ -4,6 +4,8 @@ from collections.abc import Sequence
 
 from .contracts import ModelClient, PermissionPolicy, RunResult, Tool
 
+from jsonschema import validate, ValidationError
+
 
 class Agent:
     """Student implementation entry point.
@@ -54,30 +56,32 @@ class Agent:
                             "name": call.name,
                             "content":"The tool does not exist." ,
                         })
-                    else:
+                    else:#找到工具
                         decision = self.permission_policy.decide(
                             found_tool,
                             call.arguments,
                         )
-                        if decision.allowed:
-                            try:
-                                 tool_result = found_tool.handler(**call.arguments)
-                            except Exception as error:
-                                tool_result = f"Tool execution failed: {error}"
-                            messages.append({
-                                "role": "tool",
-                                "tool_call_id": call.id,
-                                "name": call.name,
-                                "content": tool_result,
-                            })
-                        else:
-                            tool_result = "Tool execution denied"
-                            messages.append({
-                                "role": "tool",
-                                "tool_call_id": call.id,
-                                "name": call.name,
-                                "content": tool_result,
-                            })
+                        try:#校验参数
+                            validate(
+                                instance=call.arguments,
+                                schema=found_tool.input_schema,
+                            )
+                        except ValidationError as error:
+                            tool_result = f"Invalid tool arguments:{error.message}"#注意：.message 是 jsonschema.ValidationError 提供的属性
+                        else:#这里的 else 属于 try，表示：只有 try 中没有发生异常，才执行这一部分。
+                            if decision.allowed:#权限检查
+                                try:
+                                     tool_result = found_tool.handler(**call.arguments)
+                                except Exception as error:
+                                    tool_result = f"Tool execution failed: {error}"
+                            else:#无权限
+                                tool_result = "Tool execution denied"
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "name": call.name,
+                            "content": tool_result,
+                        })#返回结果
 
             if not reply.tool_calls:
                 return RunResult(
