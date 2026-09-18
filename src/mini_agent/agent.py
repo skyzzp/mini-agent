@@ -57,10 +57,6 @@ class Agent:
                             "content":"The tool does not exist." ,
                         })
                     else:#找到工具
-                        decision = self.permission_policy.decide(
-                            found_tool,
-                            call.arguments,
-                        )
                         try:#校验参数
                             validate(
                                 instance=call.arguments,
@@ -69,6 +65,10 @@ class Agent:
                         except ValidationError as error:
                             tool_result = f"Invalid tool arguments:{error.message}"#注意：.message 是 jsonschema.ValidationError 提供的属性
                         else:#这里的 else 属于 try，表示：只有 try 中没有发生异常，才执行这一部分。
+                            decision = self.permission_policy.decide(
+                                found_tool,
+                                call.arguments,
+                            )
                             if decision.allowed:#权限检查
                                 try:
                                      tool_result = found_tool.handler(**call.arguments)
