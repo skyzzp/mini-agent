@@ -1,4 +1,5 @@
 from pathlib import Path
+from .contracts import Tool
 
 
 def resolve_workspace_path(workspace, user_path):
@@ -16,3 +17,18 @@ def read_file(workspace, path):
     content = resolved.read_text(encoding="utf-8")
     return content
 
+def create_file_tools(workspace):
+    def read_handler(path):#闭包
+        return read_file(workspace,path)
+    read_tool = Tool(
+        name="read_file",
+        description="Read a UTF-8 text file inside the workspace.",
+        input_schema={
+                "type": "object",
+                "properties": {"path": {"type": "string"}, },
+                "required": ["path"],
+                "additionalProperties": False,
+        },
+        handler=read_handler,
+    )
+    return [read_tool]

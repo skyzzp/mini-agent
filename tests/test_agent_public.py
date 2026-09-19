@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from typing import Any
-
+from mini_agent.file_tools import create_file_tools
 from mini_agent import (
     Agent,
     FakeModel,
@@ -424,3 +424,33 @@ def test_agent_rejects_extra_arguments() -> None:
     assert tool_message["name"] == "echo"
     assert tool_message["content"].startswith("Invalid tool arguments:")
 
+def test_agent_reads_workspace_file(tmp_path) -> None:
+    (tmp_path / "intro.txt").write_text("你好，Agent!", encoding="utf-8")
+    model = FakeModel(
+        [
+            ModelReply(
+                tool_calls=[
+                    ToolCall(
+                        id="call_001",
+                        name="read_file",
+                        arguments={"path": "intro.txt"},
+                    )
+                ]
+            ),
+            ModelReply(content="The tool returned hello."),
+        ]
+    )
+    tools = create_file_tools(tmp_path)
+    agent = Agent(model, tools=create_file_tools(tmp_path), permission_policy=AllowAll(), max_steps=3)
+
+    result = agent.run("Read intro.txt.")
+    assert model.requests[0]["tools"] == [tools[0].as_model_spec()]
+    assert result.status == "completed"
+    assert result.steps == 2
+    second_request_messages = model.requests[1]["messages"]
+    assert second_request_messages[-1] == {
+        "role": "tool",
+        "tool_call_id": "call_001",
+        "name": "read_file",
+        "content": "你好，Agent!",
+    }
