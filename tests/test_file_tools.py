@@ -1,4 +1,4 @@
-from mini_agent.file_tools import resolve_workspace_path,read_file,create_file_tools,search_text
+from mini_agent.file_tools import resolve_workspace_path,read_file,create_file_tools,search_text,write_file
 import pytest
 
 
@@ -65,3 +65,40 @@ def test_search_tool_handler(tmp_path):
 
     assert search_tool.name == "search_text"
     assert result == "1:苹果\n3:苹果派"
+
+def test_writes_file_content(tmp_path):
+    result = write_file(
+        tmp_path,
+        "reports/summary.txt",
+        "这是总结内容",
+    )
+
+    written_file = tmp_path / "reports" / "summary.txt"
+
+    assert written_file.read_text(encoding="utf-8") == "这是总结内容"
+    assert result == "wrote file: reports/summary.txt"
+
+def test_write_file_rejects_outside_path(tmp_path):
+    with pytest.raises(ValueError):
+        write_file(tmp_path, "../outside.txt", "不能写出去")
+
+def test_work_tool_handler(tmp_path):
+    content = "苹果\n香蕉\n苹果派"
+    (tmp_path / "fruit.txt").write_text(content, encoding="utf-8")
+
+    tools = create_file_tools(tmp_path)
+    search_tool = tools[1]
+    result = search_tool.handler(path="fruit.txt", query="苹果")
+
+    assert search_tool.name == "search_text"
+    assert result == "1:苹果\n3:苹果派"
+
+def test_write_tool_handler(tmp_path):
+    tools = create_file_tools(tmp_path)
+    write_tool = tools[2]
+    result = write_tool.handler(path="reports/summary.txt",content="测试总结")
+    written_file = tmp_path / "reports" / "summary.txt"
+    assert written_file.read_text(encoding="utf-8") == "测试总结"
+    assert write_tool.name == "write_file"
+    assert result == "wrote file: reports/summary.txt"
+    assert write_tool.consequential == True

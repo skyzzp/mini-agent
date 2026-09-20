@@ -47,7 +47,25 @@ def create_file_tools(workspace):
         },
         handler=search_handler,
     )
-    return [read_tool, search_tool]
+    def write_handler(path, content):
+        return write_file(workspace,path,content)
+    write_tool = Tool(
+        name="write_file",
+        description="Write a UTF-8 text file inside the workspace.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "content": {"type": "string"},
+            },
+            "required": ["path", "content"],
+            "additionalProperties": False,
+        },
+        handler = write_handler,
+        consequential=True,
+    )
+    return [read_tool, search_tool, write_tool]
+
 def search_text(workspace, path, query):
     content = read_file(workspace, path)
     matches = []
@@ -58,6 +76,12 @@ def search_text(workspace, path, query):
     if not matches:
         return "No matches found."
     return "\n".join(matches)
+
+def write_file(workspace, path, content):
+    target = resolve_workspace_path(workspace, path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+    return f"wrote file: {path}"
 
 
 
