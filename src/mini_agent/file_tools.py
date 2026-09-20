@@ -31,4 +31,35 @@ def create_file_tools(workspace):
         },
         handler=read_handler,
     )
-    return [read_tool]
+    def search_handler(path,query):
+        return search_text(workspace,path,query)
+    search_tool = Tool(
+        name="search_text",
+        description="Search for text in a UTF-8 file inside the workspace.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "query": {"type": "string"},
+            },
+            "required": ["path", "query"],
+            "additionalProperties": False,
+        },
+        handler=search_handler,
+    )
+    return [read_tool, search_tool]
+def search_text(workspace, path, query):
+    content = read_file(workspace, path)
+    matches = []
+
+    for line_number, line in enumerate(content.splitlines(),start=1):
+        if query in line:
+            matches.append(f"{line_number}:{line}")
+    if not matches:
+        return "No matches found."
+    return "\n".join(matches)
+
+
+
+
+

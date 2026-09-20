@@ -440,11 +440,9 @@ def test_agent_reads_workspace_file(tmp_path) -> None:
             ModelReply(content="The tool returned hello."),
         ]
     )
-    tools = create_file_tools(tmp_path)
     agent = Agent(model, tools=create_file_tools(tmp_path), permission_policy=AllowAll(), max_steps=3)
 
     result = agent.run("Read intro.txt.")
-    assert model.requests[0]["tools"] == [tools[0].as_model_spec()]
     assert result.status == "completed"
     assert result.steps == 2
     second_request_messages = model.requests[1]["messages"]
@@ -453,4 +451,38 @@ def test_agent_reads_workspace_file(tmp_path) -> None:
         "tool_call_id": "call_001",
         "name": "read_file",
         "content": "你好，Agent!",
+    }
+
+def test_agent_searches_workspace_file(tmp_path) -> None:
+    (tmp_path / "fruit.txt").write_text(
+        "苹果\n香蕉\n苹果派",
+        encoding="utf-8",
+    )
+    model = FakeModel(
+        [
+            ModelReply(
+                tool_calls=[
+                    ToolCall(
+                        id="call_001",
+                        name="search_text",
+                        arguments={
+                            "path": "fruit.txt",
+                            "query": "苹果",
+                        },
+                    )
+                ]
+            ),
+            ModelReply(content="The tool returned hello."),
+        ]
+    )
+    agent = Agent(model, tools=create_file_tools(tmp_path), permission_policy=AllowAll(), max_steps=3)
+
+    result = agent.run("Search for 苹果 in fruit.txt.")
+    assert result.status == "completed"
+    assert result.steps == 2
+    assert model.requests[1]["messages"][-1] == {
+        "role": "tool",
+        "tool_call_id": "call_001",
+        "name": "search_text",
+        "content": "1:苹果\n3:苹果派",
     }

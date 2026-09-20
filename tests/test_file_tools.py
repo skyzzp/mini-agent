@@ -1,4 +1,4 @@
-from mini_agent.file_tools import resolve_workspace_path,read_file,create_file_tools
+from mini_agent.file_tools import resolve_workspace_path,read_file,create_file_tools,search_text
 import pytest
 
 
@@ -36,3 +36,32 @@ def test_read_tool_handler(tmp_path):
 
     assert read_tool.name == "read_file"
     assert result == "你好，Agent！"
+
+def test_searches_text_with_line_numbers(tmp_path):
+    content = "苹果\n香蕉\n苹果派"
+    (tmp_path / "fruit.txt").write_text(content, encoding="utf-8")
+
+    result = search_text(tmp_path, "fruit.txt", "苹果")
+
+    assert result == "1:苹果\n3:苹果派"
+
+def test_search_text_returns_message_when_no_match(tmp_path):
+    (tmp_path / "fruit.txt").write_text(
+        "苹果\n香蕉\n苹果派",
+        encoding="utf-8",
+    )
+
+    result = search_text(tmp_path, "fruit.txt", "西瓜")
+
+    assert result == "No matches found."
+
+def test_search_tool_handler(tmp_path):
+    content = "苹果\n香蕉\n苹果派"
+    (tmp_path / "fruit.txt").write_text(content, encoding="utf-8")
+
+    tools = create_file_tools(tmp_path)
+    search_tool = tools[1]
+    result = search_tool.handler(path="fruit.txt", query="苹果")
+
+    assert search_tool.name == "search_text"
+    assert result == "1:苹果\n3:苹果派"
