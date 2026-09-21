@@ -486,3 +486,33 @@ def test_agent_searches_workspace_file(tmp_path) -> None:
         "name": "search_text",
         "content": "1:苹果\n3:苹果派",
     }
+
+def test_agent_writes_workspace_file(tmp_path) -> None:
+    model = FakeModel(
+        [
+            ModelReply(
+                tool_calls=[
+                    ToolCall(
+                        id="call_001",
+                        name="write_file",
+                        arguments={
+                            "path": "reports/summary.txt",
+                            "content": "测试总结",
+                        },
+                    )
+                ]
+            ),
+            ModelReply(content="The tool returned hello."),
+        ]
+    )
+    agent = Agent(model, tools=create_file_tools(tmp_path), permission_policy=AllowAll(), max_steps=3)
+    result = agent.run("write summary.txt.")
+    assert result.status == "completed"
+    assert result.steps == 2
+    assert model.requests[1]["messages"][-1] == {
+        "role": "tool",
+        "tool_call_id": "call_001",
+        "name": "write_file",
+        "content": "wrote file: reports/summary.txt",
+    }
+    assert (tmp_path/"reports"/"summary.txt").read_text(encoding="utf-8") == "测试总结"
