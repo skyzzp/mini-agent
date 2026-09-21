@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 from typing import Any
 from mini_agent.file_tools import create_file_tools
+from mini_agent.permissions import ConfirmPermission
 from mini_agent import (
     Agent,
     FakeModel,
@@ -516,3 +517,33 @@ def test_agent_writes_workspace_file(tmp_path) -> None:
         "content": "wrote file: reports/summary.txt",
     }
     assert (tmp_path/"reports"/"summary.txt").read_text(encoding="utf-8") == "测试总结"
+
+def test_agent_writes_workspace_file_when_user_rejects(tmp_path) -> None:
+    model = FakeModel(
+        [
+            ModelReply(
+                tool_calls=[
+                    ToolCall(
+                        id="call_001",
+                        name="write_file",
+                        arguments={
+                            "path": "reports/summary.txt",
+                            "content": "测试总结",
+                        },
+                    )
+                ]
+            ),
+            ModelReply(content="The tool returned hello."),
+        ]
+    )
+    agent = Agent(model, tools=create_file_tools(tmp_path), permission_policy=ConfirmPermission(ask=lambda prompt: "n"), max_steps=3)
+    result = agent.run("write summary.txt.")
+    assert result.status == "completed"
+    assert result.steps == 2
+    assert model.requests[1]["messages"][-1] == {
+        "role": "tool",
+        "tool_call_id": "call_001",
+        "name": "write_file",
+        "content": "Tool execution denied",
+    }
+    assert not (tmp_path / "reports" / "summary.txt").exists()
