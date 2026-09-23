@@ -27,6 +27,7 @@ Mini Agent 接收用户请求，将消息和工具说明发送给模型。模型
 - FakeModel 自动化测试
 - DeepSeek 真实模型接入
 - 交互式命令行界面
+- 递归列出工作区目录中的文件
 
 ## 项目结构
 
@@ -104,7 +105,7 @@ python -m pytest -q
 当前测试结果：
 
 ```text
-34 passed in 0.15s
+35 passed in 0.15s
 ```
 
 测试覆盖的主要场景包括：

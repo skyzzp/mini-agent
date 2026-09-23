@@ -64,7 +64,27 @@ def create_file_tools(workspace):
         handler = write_handler,
         consequential=True,
     )
-    return [read_tool, search_tool, write_tool]
+
+    def list_handler(path):
+        return list_files(workspace, path)
+
+    list_tool = Tool(
+        name="list_files",
+        description=(
+            "List all files recursively inside a workspace directory. "
+            "Use this before reading a directory when file names are unknown."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+            },
+            "required": ["path"],
+            "additionalProperties": False,
+        },
+        handler=list_handler,
+    )
+    return [read_tool, search_tool, write_tool,list_tool]
 
 def search_text(workspace, path, query):
     content = read_file(workspace, path)
@@ -83,7 +103,26 @@ def write_file(workspace, path, content):
     target.write_text(content, encoding="utf-8")
     return f"wrote file: {path}"
 
+def list_files(workspace, path):
+    directory = resolve_workspace_path(workspace, path)
 
+    if not directory.is_dir():
+        raise NotADirectoryError(
+            f"Not a directory: {path}"
+        )
 
+    files = []
+
+    for item in directory.rglob("*"):
+        if item.is_file():
+            relative_path = item.relative_to(
+                Path(workspace).resolve()
+            )
+            files.append(relative_path.as_posix())
+
+    if not files:
+        return "No files found."
+
+    return "\n".join(files)
 
 

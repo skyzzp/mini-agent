@@ -1,4 +1,4 @@
-from mini_agent.file_tools import resolve_workspace_path,read_file,create_file_tools,search_text,write_file
+from mini_agent.file_tools import resolve_workspace_path,read_file,create_file_tools,search_text,write_file,list_files
 import pytest
 
 
@@ -102,3 +102,25 @@ def test_write_tool_handler(tmp_path):
     assert write_tool.name == "write_file"
     assert result == "wrote file: reports/summary.txt"
     assert write_tool.consequential == True
+
+def test_lists_files_recursively(tmp_path):
+    materials = tmp_path / "materials"
+    notes = materials / "notes"
+
+    notes.mkdir(parents=True)
+
+    (materials / "intro.txt").write_text(
+        "Agent Loop",
+        encoding="utf-8",
+    )
+    (notes / "extra.txt").write_text(
+        "Extra material",
+        encoding="utf-8",
+    )
+
+    result = list_files(tmp_path, "materials")
+
+    assert set(result.splitlines()) == {
+        "materials/intro.txt",
+        "materials/notes/extra.txt",
+    }
