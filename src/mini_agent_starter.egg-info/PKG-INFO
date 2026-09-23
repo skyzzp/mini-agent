@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: mini-agent-starter
+Version: 0.1.0
+Summary: Starter code for the SAST Mini Agent admission task
+Requires-Python: >=3.11
+Requires-Dist: jsonschema>=4.26.0
+Requires-Dist: openai>=3.17.0
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8; extra == "dev"

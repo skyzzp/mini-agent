@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from .contracts import ModelClient, PermissionPolicy, RunResult, Tool
+from .contracts import ModelClient, PermissionPolicy, RunResult, Tool, PermissionDecision
 
 from jsonschema import validate, ValidationError
 
@@ -41,8 +41,23 @@ class Agent:
                      messages=messages,
                      steps=step,
                     )
-            messages.append({"role":"assistant","content":reply.content})
-            if  reply.tool_calls:
+            assistant_message = {
+                "role": "assistant",
+                "content": reply.content,
+            }
+
+            if reply.tool_calls:
+                assistant_message["tool_calls"] = []
+
+                for call in reply.tool_calls:
+                    assistant_message["tool_calls"].append({
+                        "id": call.id,
+                        "name": call.name,
+                        "arguments": call.arguments,
+                    })
+
+            messages.append(assistant_message)
+            if reply.tool_calls:
                 for call in reply.tool_calls:
                     found_tool = None
                     for tool in self.tools:
@@ -50,12 +65,7 @@ class Agent:
                             found_tool = tool
                             break
                     if found_tool is None:
-                         messages.append({
-                            "role": "tool",
-                            "tool_call_id": call.id,
-                            "name": call.name,
-                            "content":"The tool does not exist." ,
-                        })
+                        tool_result = "The tool does not exist."
                     else:#找到工具
                         try:#校验参数
                             validate(
@@ -76,12 +86,14 @@ class Agent:
                                     tool_result = f"Tool execution failed: {error}"
                             else:#无权限
                                 tool_result = "Tool execution denied"
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": call.id,
-                            "name": call.name,
-                            "content": tool_result,
-                        })#返回结果
+
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": call.id,
+                        "name": call.name,
+                        "content": tool_result,
+                    })
+
 
             if not reply.tool_calls:
                 return RunResult(
