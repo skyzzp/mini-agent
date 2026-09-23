@@ -46,6 +46,8 @@ tests/
 ├── test_permissions.py
 ├── test_cli.py
 └── test_starter.py
+```
+
 
 ## 安装依赖
 
